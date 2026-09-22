@@ -1,0 +1,14 @@
+{
+  "name": "twin-dragon",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "雙截龍 · TWIN DRAGON — Blender-built Double Dragon-style beat 'em up, four stages, Three.js + deterministic sim",
+  "scripts": {
+    "assets": "blender --background --python blender/build_assets.py",
+    "verify": "node verify.mjs",
+    "serve": "python3 -m http.server 8124 --directory dist --bind 127.0.0.1",
+    "playtest": "node playtest.mjs http://127.0.0.1:8124"
+  },
+  "devDependencies": { "puppeteer": "24.43.1" }
+}

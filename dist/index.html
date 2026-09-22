@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0a18">
+<meta name="description" content="雙截龍 · TWIN DRAGON — a Double Dragon-style beat 'em up built with Blender and Three.js: four stages, weapons, throws, a warlord with a machine gun.">
+<title>雙截龍 · TWIN DRAGON</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d0a18'/%3E%3Cpath d='M7 22c2-8 8-12 18-12-6 3-9 7-10 12z' fill='%23ff2d7a'/%3E%3Cpath d='M25 10c-2 8-8 12-18 12 6-3 9-7 10-12z' fill='%232de0ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./style.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="menu" class="overlay">
+  <div class="shell">
+    <div class="eyebrow">A BLENDER-BUILT BEAT 'EM UP · 雙截龍</div>
+    <h1>TWIN <em>DRAGON</em></h1>
+    <p class="tag">The Shadow Fang took Su Lin. Walk the slums, the freight yard, the ridge and the hideout, and bring her home.</p>
+    <div class="loadwrap"><div id="loadBar"></div></div>
+    <div id="startNote" class="note">Loading the Blender kit…</div>
+    <div class="eyebrow">YOUR DRAGON · 選角</div>
+    <div id="heroes"><button data-hero="blue" class="on"><span class="sw blue"></span>龍鋒 Long Feng</button><button data-hero="red"><span class="sw red"></span>龍偉 Long Wei</button></div>
+    <div class="eyebrow">STAGES · 關卡 <span id="best"></span></div>
+    <div id="stages"></div>
+    <details>
+      <summary>Controls &amp; how it works</summary>
+      <div class="guide">
+        <p><b>← → ↑ ↓ / WASD</b> walk (↑↓ change depth) · <b>J / Z</b> punch · <b>K / X</b> kick · <b>L / Space</b> jump · <b>Esc</b> pause · <b>M</b> mute</p>
+        <p>Punch three times for jab, cross, hook. The second punch staggers a thug; punch again while he reels to <b>grab</b> him, then knee (kick), headbutt (punch) or throw him over your shoulder (jump). A thug behind you eats an <b>elbow</b>. Punch or kick in the air for a <b>jump kick</b>. Punch while standing on a bat, knife, whip, oil drum, crate or dynamite to pick it up; punch again to swing or throw it. Only two enemies swing at once, but the big ones shrug off jabs: bait a swing, sidestep, and punish. Buns heal.</p>
+        <p>Three lives, three continues. Time runs per screen. On a phone use the stick and the three buttons.</p>
+      </div>
+    </details>
+    <div class="foot"><span>Blender kit · Three.js · deterministic sim · single player</span><button id="resetBtn" class="link">reset progress</button></div>
+  </div>
+</div>
+
+<div id="intro" class="overlay cut">
+  <div class="scene">
+    <div class="street"></div>
+    <div class="fig sulin"></div>
+    <div class="fig thug"></div>
+    <div class="fig thug2"></div>
+    <div class="pow">!</div>
+  </div>
+  <div class="caption"><b>龍城 · DRAGON CITY</b><span>The Shadow Fang syndicate has taken Su Lin.</span><span class="late">Two brothers go after her.</span></div>
+  <button id="skipIntro" class="link">skip ▸</button>
+</div>
+
+<div id="ending" class="overlay cut">
+  <div class="caption end"><b>SU LIN IS SAFE</b><span>The warlord is down and the cage is open.</span><span class="late">Dragon City breathes again.</span><span class="late2">FINAL SCORE <em id="endScore">0</em></span><span class="late3">press PUNCH</span></div>
+</div>
+
+<div id="hud">
+  <div class="top">
+    <div class="p1"><div class="name" id="heroName"></div><div class="bar"><div id="hpBar"></div></div><div class="sub"><span id="lives">♥♥♥</span><span id="weapon"></span></div>
+      <div id="foeHud" class="foe"><div class="name" id="foeName"></div><div class="bar red"><div id="foeBar"></div></div></div></div>
+    <div class="mid"><div id="timer">99</div><div id="stageName"></div></div>
+    <div class="p2"><div class="label">SCORE</div><div id="score">0</div></div>
+  </div>
+  <div id="bossHud"><div class="name" id="bossName"></div><div class="bar boss"><div id="bossBar"></div></div></div>
+  <div id="go">GO <span>▶</span></div>
+  <div id="banner"></div>
+  <div id="continue" class="center"><b>CONTINUE?</b><div class="count" id="contN">10</div><small>press PUNCH</small><button id="contBtn">CONTINUE</button></div>
+  <div id="clear" class="center"></div>
+  <div id="over" class="center"><b>GAME OVER</b><small>press PUNCH</small><button id="overBtn">MENU</button></div>
+  <div id="pause" class="center"><b>PAUSED</b><button id="resumeBtn">RESUME</button><button id="quitBtn" class="ghost">QUIT TO MENU</button></div>
+</div>
+
+<div id="touch">
+  <div id="joy"><div id="knob"></div></div>
+  <div class="btns"><button data-key="jump">JUMP</button><button data-key="kick">KICK</button><button data-key="punch" class="big">PUNCH</button></div>
+</div>
+<pre id="debug"></pre>
+<script type="module" src="./game.js"></script>
+</body>
+</html>
