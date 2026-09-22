@@ -56,9 +56,9 @@ ok((await page.$eval('#heroName', (e) => e.textContent)).includes('Long Wei'), '
 
 // 4. keyboard: walk right, then punch
 let p0 = s.player;
-await page.keyboard.down('ArrowRight'); await sleep(600); await page.keyboard.up('ArrowRight');
+await page.keyboard.down('ArrowRight'); await sleep(900); await page.keyboard.up('ArrowRight'); await sleep(150);
 s = await snap();
-ok(s.player.x - p0.x > 0.7 || s.player.x >= s.lock[1] - 0.5, `ArrowRight for 0.6 s walked ${(s.player.x - p0.x).toFixed(2)} m (or reached the lock edge)`);
+ok(s.player.x - p0.x > 0.7 || s.player.x >= s.lock[1] - 0.5, `ArrowRight for 0.9 s walked ${(s.player.x - p0.x).toFixed(2)} m (or reached the lock edge)`);
 await page.keyboard.down('ArrowUp'); await sleep(400); await page.keyboard.up('ArrowUp');
 const zAfter = (await snap()).player.z; ok(zAfter < s.player.z, `ArrowUp moved into depth (${s.player.z} -> ${zAfter})`);
 await page.keyboard.press('KeyJ');

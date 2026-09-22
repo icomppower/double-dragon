@@ -382,14 +382,14 @@ let lastTgt = null, tgtT = 0, shownMsg = null;
 // ------------------------------------------------------------------ main loop
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.1, (now - lastT) / 1000 || 0); lastT = now;
+  const dt = Math.min(0.5, (now - lastT) / 1000 || 0); lastT = now;   // a slow renderer (software GL) still gets real time: the sim is cheap, so up to 30 steps a frame
   if (mode === 'intro') { introT += dt; $('intro').style.setProperty('--t', introT); if (introT > 5.2 || keys.punch || touch.punch || keys.enter) { $('intro').classList.remove('show'); mode = 'play'; } }
-  if (mode === 'ending') { endT += dt; if (sim) { acc += dt; while (acc >= DT) { step(sim, {}, DT); acc -= DT; } syncWorld(sim, dt); updateCamera(sim, dt); renderer.render(scene, camera); } if (endT > 14 || (endT > 2 && (keys.enter || keys.punch || touch.punch))) toMenu(); return; }
+  if (mode === 'ending') { endT += dt; if (sim) { acc += dt; let k = 0; while (acc >= DT && k < 30) { step(sim, {}, DT); acc -= DT; k++; } syncWorld(sim, dt); updateCamera(sim, dt); renderer.render(scene, camera); } if (endT > 14 || (endT > 2 && (keys.enter || keys.punch || touch.punch))) toMenu(); return; }
   if (mode !== 'play' || !sim) { if (sim && world) { syncWorld(sim, dt); updateCamera(sim, dt); renderer.render(scene, camera); } return; }
   if (!paused) {
     acc += dt; let n = 0;
-    if (acc > DT * 5) acc = DT * 5;
-    while (acc >= DT && n < 5) {
+    if (acc > DT * 30) acc = DT * 30;
+    while (acc >= DT && n < 30) {
       const inp = autoplay ? skilledBot(sim) : readInput();
       const ph = sim.phase;
       step(sim, inp, DT); acc -= DT; n++;
