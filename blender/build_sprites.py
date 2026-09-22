@@ -329,4 +329,5 @@ def main():
     pngio.write(os.path.join(PREV, 'sprites.png'), prev)
     print('DONE')
 
-main()
+if __name__ == '__main__':
+    main()
