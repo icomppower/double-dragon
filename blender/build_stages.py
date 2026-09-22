@@ -184,22 +184,24 @@ def anim_frames(name, lib, st, coll):
             r = dup(lib['TrapFloor'], 0, 0, 0, coll); r.location = (0, 0, -drop); R.append([r])
         return 2.4, 1.5, R, Vector((0, 0, 0)), 12
     if name == 'bridge':
+        # the whole 20 m span centred on the pivot (the runtime draws it at the span's centre x)
         for i in range(3):
             objs = []
             for k in range(5):
-                r = dup(lib['Bridge'], k * 4 + 2, 0, 0, coll)
+                r = dup(lib['Bridge'], k * 4 + 2 - 10, 0, 0, coll)
                 r.location.z = 0.06 * math.sin((k * 4 + 2) * 0.55 + i * 2.09); objs.append(r)
             R.append(objs)
         return 21.0, 2.2, R, Vector((0, 0, 0)), 4
     if name == 'waterfall':
         FOAM = K.mat('Foam', 'f4fbff', 0.3, 0, 0.5)
         for i in range(4):
-            r = dup(lib['Waterfall'], 0, 0, 0, coll); objs = [r]
+            # the sim's layout puts 5 m waterfall pieces on an 8 m grid: an 8 m cliff behind each one fills the gaps
+            r = dup(lib['Waterfall'], 0, 0, 0, coll); objs = [dup(lib['Cliff'], 0, 0.5, 0, coll), r]
             for k in range(6):
                 z = ((k * 1.4 + i * 0.5) % 8.0); objs.append(K.cube('foam', (-0.5 + (k % 3) * 0.5, -0.32, z + 0.3), (0.35, 0.05, 0.5), FOAM))
             objs.append(K.sphere('splash', (0.3 * (i % 2) - 0.15, -0.6, 0.25), 0.35 + 0.1 * (i % 2), FOAM, None, 8, 6, (1.6, 1, 0.5)))
             R.append(objs)
-        return 5.6, 9.0, R, Vector((0, 0, 0)), 8
+        return 8.6, 9.0, R, Vector((0, 0, 0)), 8
     if name in ('torch', 'brazier'):
         base = lib['Torch' if name == 'torch' else 'Brazier']
         for i in range(3):
@@ -264,7 +266,7 @@ def build_stage(sc, cam, lib, sid, st, previews):
         r = dup(lib[k], d['x'], -zz, d.get('yaw', 0), coll)
         layer = 'fore' if d['z'] >= FORE_Z else ('ground' if k in ('SpikePit', 'Gorge', 'Carpet') else 'back')
         inst[layer].append(r)
-    if 'bridge' in anim_inst: anim_inst['bridge'] = [[min(p[0] for p in anim_inst['bridge']) - 2, 2.9]]
+    if 'bridge' in anim_inst: anim_inst['bridge'] = [[min(p[0] for p in anim_inst['bridge']) - 2 + 10, 2.9]]
     inst['ground'] += ground_objects(st)
     for layer in inst: set_visible(inst[layer], False)
     x0 = -12.0; ntiles = math.ceil((st['length'] + 26) / TILE_M)
@@ -304,7 +306,7 @@ def build_stage(sc, cam, lib, sid, st, previews):
         for o in inst[layer]:
             for c in list(o.children): bpy.data.objects.remove(c, do_unlink=True)
             bpy.data.objects.remove(o, do_unlink=True)
-    atlas, place = S.pack(sprites, width=2048, pad=4)
+    atlas, place = S.pack(sprites, width=2048, pad=6, extrude=2)
     meta = {'ppm': PPM, 'pitch': 20, 'atlas': f'stage_{sid}.png', 'width': int(atlas.shape[1]), 'height': int(atlas.shape[0]), 'length': st['length'], 'sky': st['sky'], 'layers': layers, 'anims': anims, 'sprites': {}}
     for key, im in sprites:
         x, y, w, h = place[key]; meta['sprites'][key] = {'x': x, 'y': y, 'w': w, 'h': h}

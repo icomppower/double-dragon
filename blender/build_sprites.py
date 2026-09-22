@@ -215,8 +215,10 @@ def trim(img):
     y0, y1, x0, x1 = ys[0], ys[-1] + 1, xs[0], xs[-1] + 1
     return img[y0:y1, x0:x1], int(x0), int(y0)
 
-def pack(sprites, width=ATLAS_W, pad=1):
-    """sprites: list of (key, img). Shelf packing sorted by height. -> (atlas uint8, placements {key: (x, y, w, h)})"""
+def pack(sprites, width=ATLAS_W, pad=1, extrude=0):
+    """sprites: list of (key, img). Shelf packing sorted by height. -> (atlas uint8, placements {key: (x, y, w, h)})
+    extrude > 0 duplicates each sprite's edge pixels that far into its padding, so scaled drawImage sampling at a tile
+    edge reads the tile's own colour instead of transparent padding (no hairline seams between adjacent tiles)."""
     order = sorted(range(len(sprites)), key=lambda i: -sprites[i][1].shape[0])
     x = y = shelf = 0; place = {}
     for i in order:
@@ -227,6 +229,15 @@ def pack(sprites, width=ATLAS_W, pad=1):
     atlas = np.zeros((H, width, 4), dtype=np.uint8)
     for key, im in sprites:
         px, py, w, h = place[key]; atlas[py:py + h, px:px + w] = im
+    if extrude:
+        e = min(extrude, pad // 2)
+        for key, im in sprites:
+            px, py, w, h = place[key]
+            for k in range(1, e + 1):
+                if px - k >= 0: atlas[py:py + h, px - k] = im[:, 0]
+                if px + w - 1 + k < width: atlas[py:py + h, px + w - 1 + k] = im[:, -1]
+                if py - k >= 0: atlas[py - k, px:px + w] = im[0]
+                if py + h - 1 + k < H: atlas[py + h - 1 + k, px:px + w] = im[-1]
     return atlas, place
 
 # ------------------------------------------------------------------ render one figure sheet
