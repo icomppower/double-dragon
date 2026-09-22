@@ -44,7 +44,8 @@ details { margin-top: 18px; color: var(--dim); } summary { cursor: pointer; colo
 /* HUD (text over rendered plates; the top plate is drawn on the canvas) */
 #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; display: none; }
 body.playing #hud { display: block; }
-#hud .top { position: absolute; left: 0; right: 0; top: 0; padding: max(8px, env(safe-area-inset-top)) 12px 0; display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; }
+#hud .top { position: absolute; left: 0; right: 0; top: 0; padding: max(8px, env(safe-area-inset-top)) 10px 0; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: start; }
+#hud .p1, #hud .p2, #hud .mid { min-width: 0; }
 #hud .who { display: flex; align-items: center; gap: 8px; } #hud .who > i, #hud .foe > i { display: block; flex: none; }
 #hud .name { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hud .bar { position: relative; overflow: hidden; margin-top: 2px; }
@@ -61,7 +62,7 @@ body.playing #hud { display: block; }
 #bossHud.show { opacity: 1; }
 #bossHud .name { text-align: center; color: var(--gold); }
 #bossHud .bar > div { left: 2%; width: 96%; }
-.hudbtn { position: absolute; right: 12px; top: calc(max(8px, env(safe-area-inset-top)) + 56px); width: 44px; height: 44px; border: 0; background: none; pointer-events: auto; touch-action: manipulation; }
+.hudbtn { position: absolute; right: 12px; top: calc(max(8px, env(safe-area-inset-top)) + 56px); min-width: 44px; min-height: 44px; border: 0; background: none; pointer-events: auto; touch-action: manipulation; background-position: center !important; }
 #go { position: absolute; right: 22px; top: 42%; opacity: 0; }
 #go.show { animation: blink .55s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } to { opacity: 1; } }

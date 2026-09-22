@@ -77,7 +77,7 @@ function readInput() { const i = {}; for (const k of ['left', 'right', 'up', 'do
 // ------------------------------------------------------------------ DOM skin from the UI atlas
 function skinAll() {
   if (!R.ui) return;
-  const phone = innerWidth < 600; const u = phone ? 0.78 : 1;
+  const phone = innerWidth < 600; const u = phone ? 0.6 : 1;
   const shellW = Math.min(560, innerWidth) - 36;
   R.skin($('logo'), 'logo', Math.min(0.62, shellW / 880));
   const cs = Math.min(0.72, shellW / 770);
@@ -85,10 +85,10 @@ function skinAll() {
   const hs = Math.min(0.7, (shellW - 12) / 2 / 385);
   for (const b of document.querySelectorAll('#heroes button')) R.skin(b, b.classList.contains('on') ? 'hero_card_on' : 'hero_card', hs);
   R.skin($('hpFrame'), 'bar_frame', u); R.skin($('hpBar'), 'fill_hero', u, { keepSize: true });
-  R.skin($('foeFrame'), 'bar_frame', u * 0.85); R.skin($('foeBar'), 'fill_foe', u * 0.85, { keepSize: true });
+  R.skin($('foeFrame'), 'bar_frame', u * 0.85); R.skin($('foeBar'), 'fill_foe', u * 0.85, { keepSize: true }); if ($('foePortrait').dataset.m) R.skin($('foePortrait'), 'portrait_' + FOES[$('foePortrait').dataset.m].model, phone ? 0.36 : 0.5);
   const bs = Math.min(u, (innerWidth - 40) / 540);
   R.skin($('bossFrame'), 'bar_frame_boss', bs); R.skin($('bossBar'), 'fill_boss', bs, { keepSize: true });
-  R.skin($('heroPortrait'), 'portrait_' + HEROES[campaign ? campaign.hero : hero].model, phone ? 0.45 : 0.55);
+  R.skin($('heroPortrait'), 'portrait_' + HEROES[campaign ? campaign.hero : hero].model, phone ? 0.38 : 0.55);
   R.skin($('go'), 'go', phone ? 0.55 : 0.75);
   R.skin($('banner'), 'banner', Math.min(0.9, (innerWidth - 24) / 740));
   for (const id of ['continue', 'clear', 'over', 'pause']) R.skin($(id), 'panel', Math.min(0.95, (innerWidth - 24) / 360));
@@ -98,7 +98,7 @@ function skinAll() {
   R.skin(document.querySelector('#touch button[data-key="punch"]'), 'btn_punch', 0.93);
   R.skin(document.querySelector('#touch button[data-key="kick"]'), 'btn_kick', 0.91);
   R.skin(document.querySelector('#touch button[data-key="jump"]'), 'btn_jump', 0.91);
-  R.skin($('pauseBtn'), 'btn_pause', 0.88);
+  R.skin($('pauseBtn'), 'btn_pause', 0.98);
   R.skin($('introScene'), 'intro_' + Math.max(0, introFrame), sceneScale()); R.skin($('endScene'), 'ending_' + Math.max(0, endFrame), sceneScale());
 }
 function sceneScale() { return Math.min(innerWidth / 1016, innerHeight * 0.5 / 418); }
@@ -148,10 +148,10 @@ function banner(html, t) { $('banner').querySelector('.inner').innerHTML = html;
 let lastTgt = null, tgtT = 0, shownMsg = null, lastTimer = -1, lastScore = -1, lastLives = -1;
 function hud(s) {
   const P = s.player;
-  $('hpBar').style.width = Math.max(0, P.hp / P.maxHp * 100) + '%'; const low = P.hp <= 30; if ($('hpBar').dataset.low !== String(low)) { $('hpBar').dataset.low = String(low); R.skin($('hpBar'), low ? 'fill_low' : 'fill_hero', innerWidth < 600 ? 0.78 : 1, { keepSize: true }); }
+  $('hpBar').style.width = Math.max(0, P.hp / P.maxHp * 100) + '%'; const low = P.hp <= 30; if ($('hpBar').dataset.low !== String(low)) { $('hpBar').dataset.low = String(low); R.skin($('hpBar'), low ? 'fill_low' : 'fill_hero', innerWidth < 600 ? 0.6 : 1, { keepSize: true }); }
   if (s.lives !== lastLives) { lastLives = s.lives; R.digits($('lives'), '♥'.repeat(Math.max(0, s.lives)), 0.7); }
-  if (s.score !== lastScore) { lastScore = s.score; R.digits($('score'), String(s.score), innerWidth < 600 ? 0.75 : 0.95); }
-  const tm = String(Math.max(0, Math.ceil(s.timer))).padStart(2, '0'); if (tm !== lastTimer) { lastTimer = tm; R.digits($('timer'), tm, innerWidth < 600 ? 1.0 : 1.3); } $('timer').classList.toggle('low', s.timer < 15);
+  if (s.score !== lastScore) { lastScore = s.score; R.digits($('score'), String(s.score), innerWidth < 600 ? 0.62 : 0.95); }
+  const tm = String(Math.max(0, Math.ceil(s.timer))).padStart(2, '0'); if (tm !== lastTimer) { lastTimer = tm; R.digits($('timer'), tm, innerWidth < 600 ? 0.9 : 1.3); } $('timer').classList.toggle('low', s.timer < 15);
   const tgt = s.foes.find((f) => f.alive && f.flash > 0) || s.foes.find((f) => f.alive && f.hp < f.maxHp && !f.isBoss);
   if (tgt) { lastTgt = tgt; tgtT = 2.5; } tgtT -= 1 / 60;
   if (lastTgt && tgtT > 0 && lastTgt.alive) { $('foeHud').classList.add('show'); $('foeName').textContent = `${lastTgt.zh} ${lastTgt.name}`; $('foeBar').style.width = Math.max(0, lastTgt.hp / lastTgt.maxHp * 100) + '%'; if ($('foePortrait').dataset.m !== lastTgt.kind) { $('foePortrait').dataset.m = lastTgt.kind; R.skin($('foePortrait'), 'portrait_' + FOES[lastTgt.kind].model, 0.5); } } else $('foeHud').classList.remove('show');
