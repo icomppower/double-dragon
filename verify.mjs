@@ -124,6 +124,28 @@ ok(jabAt(-0.59) === true && jabAt(-0.61) === false, 'same tolerance on the near 
   ok(k.player.weapon === null && k.log.some((h) => h.move === 'Knife' && h.dmg === 12) && (k.pickups.some((p) => p.kind === 'knife') || !k.foes[0].alive), `thrown knife hits for ${WEAPONS.knife.dmg} and lands as a pickup`);
 }
 
+// 10b. the whip: 2.2 m reach, staggers instead of knocking down, hits everyone in line, wears out after ten hits
+{
+  const s = createDuel('thug', { seed: 1, weapon: 'whip', count: 2 }); const [a, b] = s.foes; for (const f of [a, b]) { f.frozen = true; f.hp = f.maxHp = 10000; f.z = s.player.z; f.state = 'idle'; }
+  a.x = s.player.x + 1.0; b.x = s.player.x + 2.0;
+  for (let i = 0; i < 30; i++) step(s, { punch: i === 0 }, DT);
+  const hits = s.log.filter((h) => h.move === 'Whip');
+  ok(hits.length === 2 && hits.every((h) => h.dmg === WEAPONS.whip.dmg) && a.state !== 'down' && b.state !== 'down' && a.stagger > 0, `one whip crack hits both thugs at 1.0 and 2.0 m for ${WEAPONS.whip.dmg}, staggers without knocking down (${hits.length} hits, states ${a.state}/${b.state})`);
+  let n = 0; for (let i = 0; i < 2000 && s.player.weapon === 'whip'; i++) { if (i % 60 === 0) { for (const f of [a, b]) { f.state = 'idle'; f.t = 0; f.invuln = 0; f.stagger = 0; } b.x = s.player.x + 6; a.x = s.player.x + 1.0; n++; } step(s, { punch: i % 60 === 0 }, DT); }
+  ok(s.player.weapon === null && s.log.filter((h) => h.move === 'Whip').length === WEAPONS.whip.uses + 1, `whip wears out after ${WEAPONS.whip.uses} hits (${s.log.filter((h) => h.move === 'Whip').length} total incl. the double hit)`);
+}
+// 10c. food: a bun appears when section 2 clears and heals 40 (capped) for 200 points
+{
+  const s = createGame('street', { seed: 2 });
+  while (s.phase === 'play' && s.t < 300 && !s.events.some((e) => e.ev === 'clearsection' && e.i === 1)) step(s, skilledBot(s), DT);
+  ok(s.pickups.some((p) => p.food && p.kind === 'bun'), `a bun lies ahead after the second screen clears (t=${s.t.toFixed(1)})`);
+  const P = s.player; P.hp = 50; const bun = s.pickups.find((p) => p.food); P.x = bun.x; P.z = bun.z; const sc = s.score;
+  step(s, {}, DT);
+  ok(P.hp === 90 && s.score === sc + 200 && !s.pickups.some((p) => p.food) && s.events.at(-1).ev === 'eat', `walking onto it heals 50 -> ${P.hp} and scores +${s.score - sc}`);
+  P.hp = P.maxHp - 10; s.pickups.push({ id: 9999, kind: 'bun', food: true, x: P.x, z: P.z }); step(s, {}, DT);
+  ok(P.hp === P.maxHp, `healing is capped at ${P.maxHp}`);
+}
+
 // 11. negative half: five mutations, each must break its gate
 {
   CONFIG.foeDmg = 0; const s = run('street', idleBot, { seed: 1 }, 200); CONFIG.foeDmg = 1;
@@ -134,7 +156,8 @@ ok(jabAt(-0.59) === true && jabAt(-0.61) === false, 'same tolerance on the near 
   ok(wide === true, 'mutation: infinite depth tolerance makes the 0.61 jab land, so the depth gate would fail');
   CONFIG.downFoe = 0.2; const t = hookDownTicks(); CONFIG.downFoe = 0.7;
   ok(t < 42 || t > 46, `mutation: 0.2 s enemy knockdown measures ${t} ticks, so the timing gate would fail`);
-  const s5 = run('street', idleBot, { seed: 1 }); ok(s5.phase !== 'clear', 'mutation: replacing the skilled bot with the idle one does not clear the stage');
+  CONFIG.playerDmg = 0.15; const s5 = run('street', skilledBot, { seed: 1 }, 320); CONFIG.playerDmg = 1;
+  ok(s5.phase !== 'clear', `mutation: player damage at 15% stops the skilled bot clearing Dragon Street, so the clear gate would fail (phase=${s5.phase} t=${s5.t.toFixed(0)})`);
 }
 
 for (const n of notes) console.log(n);

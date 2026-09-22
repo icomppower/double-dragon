@@ -42,7 +42,8 @@ await page.waitForFunction('window.__td.snap().mode==="intro"', { timeout: 15000
 ok(await page.$eval('#intro', (el) => el.classList.contains('show')), 'kidnapping intro is showing');
 await page.click('#skipIntro');
 await page.waitForFunction('window.__td.snap().mode==="play"', { timeout: 15000 });
-await page.waitForFunction('window.__td.snap().frames>30', { timeout: 20000 }).catch(() => {});
+const stepping = await page.waitForFunction('window.__td.snap().frames>30', { timeout: 20000 }).then(() => true).catch(() => false);
+ok(stepping, 'sim reached 30 frames within 20 s of play starting');
 await sleep(300);
 s = await snap();
 ok(s.stage === 'street' && s.phase === 'play' && s.frames > 20, `stage started and the sim is stepping (${s.stage}, ${s.phase}, frames=${s.frames})`);
@@ -93,6 +94,25 @@ ok(s.section >= 1 || s.player.x > 14, `bot progressed past the first screen (sec
 const foeHud = await page.$eval('#foeHud', (e) => e.classList.contains('show')); const scoreTxt = await page.$eval('#score', (e) => e.textContent.trim());
 ok(parseInt(scoreTxt.replace(/,/g, '')) === s.score && s.score > 0, `score HUD tracks the sim (${scoreTxt} vs ${s.score}); foe bar shown=${foeHud}`);
 
+// 6b. the stage boss is an elite: gold-tinted, with a boss bar
+await page.evaluate(() => { const sim = window.__td.sim(); sim.foes.length = 0; sim.lock = null; sim.section = 4; sim.player.x = 106; sim.progress = 106; });
+const bossUp = await page.waitForFunction('!!window.__td.snap().boss', { timeout: 30000 }).then(() => true).catch(() => false);
+s = await snap();
+ok(bossUp && s.boss && s.boss.name.includes('Ox'), `elite boss spawned when the last screen opened (${s.boss && s.boss.name})`);
+await sleep(400);
+const tints = await page.evaluate(() => window.__td.foeTints());
+const gold = (hex) => { const v = parseInt(hex, 16); const r = v >> 16, g = (v >> 8) & 255, b = v & 255; return Math.abs(r - 0xd4) < 6 && Math.abs(g - 0xa5) < 6 && Math.abs(b - 0x20) < 6; };
+ok(tints.some((cols) => cols.some(gold)), `an elite figure carries the gold tint (${tints.map((c) => c.length).join('/')} colours per foe)`);
+ok(await page.$eval('#bossHud', (e) => e.classList.contains('show')), 'boss bar shown');
+if (MOBILE) {
+  const pb = await inView('#pauseBtn'); ok(pb.top && pb.inView && pb.w >= 44, 'pause button hit-testable on the phone HUD ' + JSON.stringify(pb));
+  const b2 = await page.$('#pauseBtn'); const bb2 = await b2.boundingBox();
+  await page.touchscreen.touchStart(bb2.x + bb2.width / 2, bb2.y + bb2.height / 2); await sleep(50); await page.touchscreen.touchEnd(); await sleep(200);
+  ok((await snap()).paused === true && (await page.$eval('#pause', (e) => e.classList.contains('show'))), 'tapping ❚❚ pauses');
+  await page.click('#muteBtn'); ok((await page.$eval('#muteBtn', (e) => e.textContent)) === 'SOUND: OFF', 'sound toggle in the pause menu');
+  await page.click('#resumeBtn'); await sleep(200); ok((await snap()).paused === false, 'RESUME unpauses');
+}
+
 // 7. continue flow: bleed the player out, take the continue
 await page.evaluate(() => { const sim = window.__td.sim(); sim.lives = 1; sim.player.hp = 1; window.__td.autoplay(false); });
 await page.waitForFunction('window.__td.snap().phase==="continue"', { timeout: 60000 }).catch(() => {});
@@ -115,6 +135,20 @@ await page.keyboard.press('Escape'); await sleep(200);
 ok(await page.$eval('#pause', (e) => e.classList.contains('show')) && (await snap()).paused === true, 'Escape pauses');
 await page.click('#quitBtn'); await sleep(300); s = await snap();
 ok(s.mode === 'menu' && (await page.$eval('#menu', (e) => e.classList.contains('show'))), 'quit returns to the menu');
+// 10. the ending: clear the hideout, the captive walks out, the ending screen shows, back to the menu
+await page.evaluate(() => window.__td.start('hideout', 'blue'));
+await sleep(600);
+await page.evaluate(() => { const sim = window.__td.sim(); sim.foes.length = 0; sim.lock = null; sim.section = 4; sim.player.x = 108; sim.progress = 108; window.__td.autoplay(true); });
+const warlord = await page.waitForFunction('!!window.__td.snap().boss', { timeout: 30000 }).then(() => true).catch(() => false);
+ok(warlord, 'the warlord appears in the throne room');
+await page.evaluate(() => { const sim = window.__td.sim(); if (sim.boss) sim.boss.hp = 1; });
+const ended = await page.waitForFunction('window.__td.snap().mode==="ending"', { timeout: 60000 }).then(() => true).catch(() => false);
+s = await snap();
+ok(ended && s.phase === 'won', `beating the warlord runs the ending (mode=${s.mode} phase=${s.phase})`);
+ok(await page.$eval('#ending', (e) => e.classList.contains('show')) && /\d/.test(await page.$eval('#endScore', (e) => e.textContent)), 'ending overlay shows the final score');
+await sleep(2600); await page.keyboard.down('KeyJ'); await sleep(120); await page.keyboard.up('KeyJ'); await sleep(400);
+s = await snap(); ok(s.mode === 'menu', `PUNCH after the ending returns to the menu (mode=${s.mode})`);
+ok(await page.$$eval('#stages .stage em', (els) => els.filter((e) => e.textContent === 'cleared').length) >= 1, 'hideout marked cleared in the menu');
 ok(errs.length === 0, `no console/page errors (${errs.slice(0, 3).join(' | ')})`);
 
 await browser.close();

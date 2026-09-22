@@ -29,7 +29,8 @@
       <div class="guide">
         <p><b>← → ↑ ↓ / WASD</b> walk (↑↓ change depth) · <b>J / Z</b> punch · <b>K / X</b> kick · <b>L / Space</b> jump · <b>Esc</b> pause · <b>M</b> mute</p>
         <p>Punch three times for jab, cross, hook. The second punch staggers a thug; punch again while he reels to <b>grab</b> him, then knee (kick), headbutt (punch) or throw him over your shoulder (jump). A thug behind you eats an <b>elbow</b>. Punch or kick in the air for a <b>jump kick</b>. Punch while standing on a bat, knife, whip, oil drum, crate or dynamite to pick it up; punch again to swing or throw it. Only two enemies swing at once, but the big ones shrug off jabs: bait a swing, sidestep, and punish. Buns heal.</p>
-        <p>Three lives, three continues. Time runs per screen. On a phone use the stick and the three buttons.</p>
+        <p>Watch the floor: the freight yard has a conveyor that drags you back and a spike pit to jump, the ridge a rope bridge with a gorge on both sides and boulders rolling down the road, the hideout spike walls and trap floors. The walkable band narrows on the bridge. Buns heal.</p>
+        <p>Three lives, three continues. Time runs per screen. On a phone use the stick and the three buttons; the ❚❚ button pauses (sound toggle and quit live there).</p>
       </div>
     </details>
     <div class="foot"><span>Blender kit · Three.js · deterministic sim · single player</span><button id="resetBtn" class="link">reset progress</button></div>
@@ -60,12 +61,13 @@
     <div class="p2"><div class="label">SCORE</div><div id="score">0</div></div>
   </div>
   <div id="bossHud"><div class="name" id="bossName"></div><div class="bar boss"><div id="bossBar"></div></div></div>
+  <button id="pauseBtn" class="hudbtn" aria-label="Pause">❚❚</button>
   <div id="go">GO <span>▶</span></div>
   <div id="banner"></div>
   <div id="continue" class="center"><b>CONTINUE?</b><div class="count" id="contN">10</div><small>press PUNCH</small><button id="contBtn">CONTINUE</button></div>
   <div id="clear" class="center"></div>
   <div id="over" class="center"><b>GAME OVER</b><small>press PUNCH</small><button id="overBtn">MENU</button></div>
-  <div id="pause" class="center"><b>PAUSED</b><button id="resumeBtn">RESUME</button><button id="quitBtn" class="ghost">QUIT TO MENU</button></div>
+  <div id="pause" class="center"><b>PAUSED</b><button id="resumeBtn">RESUME</button><button id="muteBtn" class="ghost">SOUND: ON</button><button id="quitBtn" class="ghost">QUIT TO MENU</button></div>
 </div>
 
 <div id="touch">

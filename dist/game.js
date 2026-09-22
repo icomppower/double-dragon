@@ -37,15 +37,16 @@ const lib = {}; let assetsOk = false; let kitFoot = {};
 async function loadAssets() {
   const loader = new GLTFLoader();
   try { kitFoot = (await (await fetch('./assets/kit.json')).json()).pieces || {}; } catch { kitFoot = {}; }
-  const files = ['figures', 'weapons', 'kit']; let done = 0;
+  const files = ['figures', 'weapons', 'kit']; let done = 0, allOk = true;
   for (const f of files) {
-    try { const g = await loader.loadAsync(`./assets/${f}.glb`); for (const root of g.scene.children.slice()) lib[root.name] = root; assetsOk = true; }
-    catch (e) { console.warn('asset load failed, using fallback for', f, e); }
+    try { const g = await loader.loadAsync(`./assets/${f}.glb`); for (const root of g.scene.children.slice()) lib[root.name] = root; }
+    catch (e) { console.warn('asset load failed, using fallback for', f, e); allOk = false; }
     done++; $('loadBar').style.width = (done / files.length * 100) + '%';
   }
+  assetsOk = allOk;
+  const FALLBACK_COLOR = { W_Bat: 0xc9a066, W_Knife: 0xc8ccd0, W_Whip: 0x4a2a14, W_Dynamite: 0xc8302a, W_Gun: 0x2b2e33, W_Drum: 0x3a6ea5, W_Crate: 0xb58a4a, W_Boulder: 0x7d7a72, Bun: 0xf3e3c8, Marker: 0xf2c400 };
   for (const n of ['HeroBlue', 'HeroRed', 'Thug', 'Whip', 'Brute', 'Knife', 'Boss', 'Captive']) if (!lib[n]) lib[n] = fallbackFigure(n);
-  for (const n in kitFoot) if (!lib[n]) lib[n] = fallbackBox(n, [kitFoot[n].w || 1, kitFoot[n].h || 1, kitFoot[n].d || 1]);
-  for (const n of ['W_Bat', 'W_Knife', 'W_Whip', 'W_Dynamite', 'W_Gun', 'W_Drum', 'W_Crate', 'W_Boulder', 'Bun', 'Marker']) if (!lib[n]) lib[n] = fallbackBox(n, [0.3, 0.3, 0.3], 0xaaaaaa);
+  for (const n of new Set([...Object.keys(kitFoot), ...Object.keys(FALLBACK_COLOR)])) if (!lib[n]) { const ft = kitFoot[n] || { w: 0.3, h: 0.3, d: 0.3 }; lib[n] = fallbackBox(n, [ft.w || 1, ft.h || 1, ft.d || 1], FALLBACK_COLOR[n] || 0x8a8a8a); }
 }
 function fallbackBox(name, [w, h, d], color = 0x8a8a8a) {
   const g = new THREE.Group(); g.name = name;
@@ -66,7 +67,9 @@ function findPart(root, suffix) { let r = null; root.traverse((o) => { if (!r &&
 function tintMaterial(root, matName, color) {
   root.traverse((o) => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m, i) => { if (m.name === matName) { const c = m.clone(); c.color.set(color); if (Array.isArray(o.material)) o.material[i] = c; else o.material = c; } }); } });
 }
-function cloneMaterials(root) { root.traverse((o) => { if (o.isMesh) { o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone(); } }); }
+function cloneMaterials(root) { root.traverse((o) => { if (o.isMesh) { o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone(); if (world) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => world.owned.push(m)); } }); }
+function disposeFigure(fig) { fig.o.traverse((o) => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); }); }
+function disposeWorld(w) { for (const m of w.owned) m.dispose(); w.owned.length = 0; }
 
 // ------------------------------------------------------------------ world
 let world = null; let shake = 0;
@@ -77,7 +80,7 @@ const SKY = {
   indoor: { bg: 0x120e10, fog: [0x120e10, 25, 70], hemi: [0xffd6a0, 0x2a1a10, 0.9], sun: [0xffb070, 1.0, [-10, 20, 20]], ground: 0x4a4540, side: 0x3a3530 },
 };
 function buildWorld(s) {
-  if (world) scene.remove(world.group);
+  if (world) { scene.remove(world.group); disposeWorld(world); }
   const group = new THREE.Group(); scene.add(group);
   const st = s.stage; const cfg = SKY[st.sky] || SKY.night;
   scene.background = new THREE.Color(cfg.bg); scene.fog = new THREE.Fog(cfg.fog[0], cfg.fog[1], cfg.fog[2]);
@@ -104,9 +107,9 @@ function buildWorld(s) {
   }
   // lamps glow at night
   if (st.sky === 'night' || st.sky === 'indoor') { let n = 0; for (const d of decor) { if ((d.kind === 'StreetLamp' || d.kind === 'Torch' || d.kind === 'Brazier') && n < 10) { const pl = new THREE.PointLight(d.kind === 'StreetLamp' ? 0xffd9a0 : 0xff9a40, d.kind === 'StreetLamp' ? 30 : 14, 18, 1.6); pl.position.set(d.x, d.kind === 'StreetLamp' ? 5.8 : 2.4, d.kind === 'StreetLamp' ? 1.9 : 1.2); group.add(pl); n++; } } }
-  world = { group, decor, hz, foes: new Map(), pickups: new Map(), projectiles: new Map(), boulders: new Map(), effects: [], player: null, captive: null, cage: null };
-  const pf = inst(HEROES[s.hero].model); group.add(pf); world.player = makeFigure(pf, 1);
-  if (st.id === 'hideout') { const cage = decor.find((d) => d.kind === 'Cage'); if (cage) { const c = inst('Captive'); c.position.set(cage.x, 0, cage.o.position.z + 0.05); group.add(c); world.captive = makeFigure(c, 1); world.captive.o.rotation.y = Math.PI / 2 + 0.4; world.cage = cage.o; } }
+  world = { group, decor, hz, foes: new Map(), pickups: new Map(), projectiles: new Map(), boulders: new Map(), effects: [], player: null, captive: null, cage: null, owned: [gm, sm] };
+  const pf = inst(HEROES[s.hero].model); cloneMaterials(pf); group.add(pf); world.player = makeFigure(pf, 1);
+  if (st.id === 'hideout') { const cage = decor.find((d) => d.kind === 'Cage'); if (cage) { const c = inst('Captive'); cloneMaterials(c); c.position.set(cage.x, 0, cage.o.position.z + 0.05); group.add(c); world.captive = makeFigure(c, 1); world.captive.o.rotation.y = Math.PI / 2 + 0.4; world.cage = cage.o; } }
   camX = s.player.x + 1.5; camSnap = true;
 }
 function makeFigure(o, scale) {
@@ -225,8 +228,8 @@ function foeFigure(f) {
 }
 function syncWorld(s, dt) {
   poseFigure(world.player, s.player, dt, s);
-  for (const f of s.foes) { if (!f.alive && f.state !== 'dead') continue; const fig = ensure(world.foes, f, () => foeFigure(f)); poseFigure(fig, f, dt, s); fig.seen = s.frames; }
-  for (const [f, fig] of world.foes) if (fig.seen !== s.frames) { world.group.remove(fig.o); world.foes.delete(f); }
+  for (const f of s.foes) { if (!f.alive && f.state !== 'dead' && f.state !== 'fall') continue; const fig = ensure(world.foes, f, () => foeFigure(f)); poseFigure(fig, f, dt, s); fig.seen = s.frames; }
+  for (const [f, fig] of world.foes) if (fig.seen !== s.frames) { world.group.remove(fig.o); disposeFigure(fig); world.foes.delete(f); }
   // pickups
   for (const p of s.pickups) {
     const o = ensure(world.pickups, p, () => { const n = p.food ? 'Bun' : (WEAPONS[p.kind] && WEAPONS[p.kind].heavy ? (p.kind === 'drum' ? 'W_Drum' : 'W_Crate') : 'W_' + p.kind[0].toUpperCase() + p.kind.slice(1)); const o = inst(n); if (!p.food && !(WEAPONS[p.kind] && WEAPONS[p.kind].heavy)) { o.rotation.z = -Math.PI / 2; o.position.y = 0.04; } world.group.add(o); return o; });
@@ -244,11 +247,11 @@ function syncWorld(s, dt) {
   // effects
   for (const fx of s.effects) {
     if (fx._o) continue;
-    const color = fx.kind === 'boom' ? 0xff8a2a : fx.kind === 'heal' ? 0x7dff4a : fx.kind === 'muzzle' ? 0xfff0a0 : fx.kind === 'smash' ? 0xd0c0a0 : fx.big ? 0xffe12d : 0xffffff;
-    const size = fx.kind === 'boom' ? 1.6 : fx.kind === 'smash' ? 0.9 : fx.big ? 0.75 : 0.45;
+    const color = fx.kind === 'boom' ? 0xff8a2a : fx.kind === 'heal' ? 0x7dff4a : fx.kind === 'muzzle' ? 0xfff0a0 : fx.kind === 'smash' || fx.kind === 'rumble' ? 0xd0c0a0 : fx.big ? 0xffe12d : 0xffffff;
+    const size = fx.kind === 'boom' ? 1.6 : fx.kind === 'rumble' ? 1.8 : fx.kind === 'smash' ? 0.9 : fx.big ? 0.75 : 0.45;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
     m.position.set(fx.x, fx.y, fx.z + 0.3); m.rotation.z = Math.random() * 6.28; world.group.add(m); fx._o = m; fx._t0 = fx.t; world.effects.push(fx);
-    if (fx.kind === 'boom' || fx.big) shake = Math.max(shake, fx.kind === 'boom' ? 1.2 : 0.5);
+    if (fx.kind === 'boom' || fx.big || fx.kind === 'rumble') shake = Math.max(shake, fx.kind === 'boom' ? 1.2 : fx.kind === 'rumble' ? 0.7 : 0.5);
   }
   for (const fx of world.effects) { const u = fx.t / fx._t0; fx._o.material.opacity = Math.max(0, u); const sc = 1 + (1 - u) * 1.4; fx._o.scale.set(sc, sc, sc); fx._o.rotation.z += dt * 4; if (fx.t <= 0) { world.group.remove(fx._o); fx._o.geometry.dispose(); fx._o.material.dispose(); } }
   world.effects = world.effects.filter((fx) => fx.t > 0);
@@ -293,7 +296,7 @@ function audioFromEvents(s, from) {
   for (let i = from; i < s.events.length; i++) { const e = s.events[i]; if (e.ev === 'pickup') audio.play('pickup'); else if (e.ev === 'eat') audio.play('eat'); else if (e.ev === 'throw') audio.play('throw'); else if (e.ev === 'playerdown') audio.play('kd'); else if (e.ev === 'section' && s.stage.sections[e.i] && s.stage.sections[e.i].boss) audio.play('boss'); }
   for (let i = lastLog; i < s.log.length; i++) { const h = s.log[i]; if (h.on === 'player') audio.play('hurt'); else if (h.move === 'Hook' || h.move === 'Throw' || h.move === 'Bat' || h.move === 'Elbow' || h.move === 'Jump Kick') audio.play('kd'); else audio.play('hit'); }
   lastLog = s.log.length;
-  for (const fx of s.effects) { if (!fx._snd) { fx._snd = true; if (fx.kind === 'boom') audio.play('boom'); else if (fx.kind === 'muzzle') audio.play('gun'); } }
+  for (const fx of s.effects) { if (!fx._snd) { fx._snd = true; if (fx.kind === 'boom') audio.play('boom'); else if (fx.kind === 'muzzle') audio.play('gun'); else if (fx.kind === 'rumble') audio.play('kd'); } }
 }
 let lastLog = 0, lastEv = 0, lastPlayerAttack = null;
 
@@ -301,7 +304,7 @@ let lastLog = 0, lastEv = 0, lastPlayerAttack = null;
 const keys = {}, latch = {}; const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', KeyJ: 'punch', KeyZ: 'punch', KeyK: 'kick', KeyX: 'kick', KeyL: 'jump', Space: 'jump', KeyC: 'jump' };
 addEventListener('keydown', (e) => { const k = KEYMAP[e.code]; if (k) { if (!keys[k]) latch[k] = true; keys[k] = true; e.preventDefault(); } if (e.code === 'Enter') { keys.enter = true; } if (e.code === 'Escape') togglePause(); if (e.code === 'KeyM') { audio.on = !audio.on; } audio.unlock(); });
 addEventListener('keyup', (e) => { const k = KEYMAP[e.code]; if (k) keys[k] = false; if (e.code === 'Enter') keys.enter = false; });
-addEventListener('blur', () => { for (const k in keys) keys[k] = false; touch.left = touch.right = touch.up = touch.down = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; for (const k in latch) latch[k] = false; for (const k in touch) touch[k] = false; for (const b of document.querySelectorAll('#touch button')) b.classList.remove('on'); });
 const touch = { left: false, right: false, up: false, down: false, punch: false, kick: false, jump: false };
 function setupTouch() {
   const joy = $('joy'); const knob = $('knob'); let jid = null; const R = 60;
@@ -385,6 +388,7 @@ function frame(now) {
   if (mode !== 'play' || !sim) { if (sim && world) { syncWorld(sim, dt); updateCamera(sim, dt); renderer.render(scene, camera); } return; }
   if (!paused) {
     acc += dt; let n = 0;
+    if (acc > DT * 5) acc = DT * 5;
     while (acc >= DT && n < 5) {
       const inp = autoplay ? skilledBot(sim) : readInput();
       const ph = sim.phase;
@@ -418,6 +422,8 @@ async function boot() {
   $('contBtn').addEventListener('click', () => { if (sim && sim.phase === 'continue') { useContinue(sim); showOverlay(null); } });
   $('quitBtn').addEventListener('click', () => { toMenu(); paused = false; });
   $('resumeBtn').addEventListener('click', () => togglePause());
+  $('pauseBtn').addEventListener('click', () => { if (mode === 'play') togglePause(); });
+  $('muteBtn').addEventListener('click', () => { audio.on = !audio.on; $('muteBtn').textContent = audio.on ? 'SOUND: ON' : 'SOUND: OFF'; });
   $('overBtn').addEventListener('click', () => toMenu());
   $('skipIntro').addEventListener('click', () => { $('intro').classList.remove('show'); mode = 'play'; });
   await loadAssets();
@@ -432,6 +438,7 @@ window.__td = {
   autoplay: (v) => { autoplay = !!v; },
   drawCalls: () => renderer.info.render.calls, triangles: () => renderer.info.render.triangles,
   pivots: (name) => { const t = lib[name]; if (!t) return []; const r = []; t.traverse((o) => { if (/_(Torso|Head|ArmL|ArmR|LegL|LegR)$/.test(o.name)) r.push(o.name); }); return r; },
+  foeTints: () => { if (!world) return []; return [...world.foes.values()].map((fig) => { const cols = new Set(); fig.o.traverse((m) => { if (m.isMesh) (Array.isArray(m.material) ? m.material : [m.material]).forEach((mm) => cols.add(mm.color.getHexString())); }); return [...cols]; }); },
   figurePose: () => { const f = world && world.player; if (!f) return null; const r = {}; for (const k in f.parts) if (f.parts[k]) r[k] = f.parts[k].rotation.x; r.lie = f.lie; r.y = f.o.position.y; return r; },
   step: (n) => { for (let i = 0; i < n; i++) step(sim, autoplay ? skilledBot(sim) : readInput(), DT); },
   useContinue: () => useContinue(sim),

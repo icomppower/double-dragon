@@ -6,7 +6,7 @@ export const DT = 1 / 60;
 export const ATTACK_TOKENS = 2;      // at most this many foes may be winding up / swinging at once
 export const HIT_Z = 0.6;            // an attack connects when |dz| <= HIT_Z
 // the oracle mutates these to prove its gates can fail; the game never touches them
-export const CONFIG = { tokens: ATTACK_TOKENS, hitZ: HIT_Z, foeDmg: 1, downFoe: 0.7, downPlayer: 0.9, buffer: 0.2 };
+export const CONFIG = { tokens: ATTACK_TOKENS, hitZ: HIT_Z, foeDmg: 1, playerDmg: 1, downFoe: 0.7, downPlayer: 0.9, buffer: 0.2 };
 export const BAND = [0.8, 5.0];      // walkable depth band
 export const PLAYER_HP = 120, LIVES = 3, CONTINUES = 3, STAGE_TIME = 99, CONTINUE_TIME = 10;
 export const GRAVITY = 14, JUMP_V = 4.6, JUMP_RUN = 3.2;
@@ -216,13 +216,13 @@ function logHit(s, by, on, move, dmg, before) { if (s.log.length < 4000) s.log.p
 function hit(s, by, on, move, dir, opts = {}) {
   if (!on.alive || on.invuln > 0 || on.state === 'dead') return false;
   if (on.state === 'down' || on.state === 'getup' || on.state === 'fall') return false;
-  let dmg = opts.dmg ?? move.dmg; if (by.kind !== 'player' && CONFIG.foeDmg !== 1) dmg = Math.round(dmg * CONFIG.foeDmg);
+  let dmg = opts.dmg ?? move.dmg; if (by.kind !== 'player' && CONFIG.foeDmg !== 1) dmg = Math.round(dmg * CONFIG.foeDmg); if (by.kind === 'player' && CONFIG.playerDmg !== 1) dmg = Math.max(1, Math.round(dmg * CONFIG.playerDmg));
   const before = on.hp;
   on.hp = Math.max(0, on.hp - dmg);
   logHit(s, by, on, move, dmg, before);
   on.flash = 0.12; by.hitstop = Math.max(by.hitstop, 0.06); on.hitstop = Math.max(on.hitstop, 0.06);
   if (on.kind === 'player') { s.hitsTaken++; s.player.combo = 0; if (s.player.held) release(s.player); }
-  else { s.hitsDealt++; s.score += dmg * 10; }
+  else if (by.kind === 'player') { s.hitsDealt++; s.score += dmg * 10; }
   if (on.holder && on.holder !== by) release(on.holder);
   s.effects.push({ kind: 'spark', x: (by.x + on.x) / 2, z: on.z, y: 1.2 + (on.y || 0), t: 0.15, big: !!(move.kd || (dmg >= 14)) });
   if (on.hp <= 0) { die(s, on, dir, by); return true; }
@@ -230,7 +230,7 @@ function hit(s, by, on, move, dir, opts = {}) {
   if (kd) knockdown(on, dir, move.kb);
   else if (move.nostun) { on.x += dir * 0.03; }
   else if (on.armor && !opts.force) { /* brute / boss shrug light hits */ on.x += dir * 0.05; if (on.kind !== 'player' && s.lock && on.entered) on.x = clamp(on.x, s.lock.min + 0.3, s.lock.max - 0.3); }
-  else { setState(on, 'hit', on.kind === 'player' ? 0.3 : 0.35); on.move = null; on.phase = null; on.vx = dir * (move.kb || 0.3) * 3; if (move.stagger) on.stagger = move.stagger; if (on.state === 'held') { /* keep held */ } if (on.held) release(on); }
+  else { setState(on, 'hit', on.kind === 'player' ? 0.3 : 0.35); on.move = null; on.phase = null; on.vx = dir * (move.kb || 0.3) * 3; if (move.stagger) on.stagger = move.stagger; if (on.held) release(on); }
   if (move.hold && on.kind === 'player' && on.hp > 0) { setState(on, 'held', move.hold); on.holder = by; by.held = on; by.hugT = move.hold; }
   return true;
 }
@@ -238,7 +238,7 @@ function die(s, e, dir, by) {
   e.alive = e.kind === 'player'; // player "death" handled by lives
   if (e.kind === 'player') { playerDown(s, dir); return; }
   setState(e, 'dead', 1.4); e.vx = dir * 2.4; e.vy = 2.6; e.y = Math.max(e.y, 0.01); e.alive = false; if (e.held) release(e); if (e.holder) release(e.holder);
-  s.kills++; const sc = e.def.score * (e.elite ? ELITE.score : 1); s.score += sc;
+  s.kills++; const sc = Math.round(e.def.score * (e.elite ? ELITE.score : 1) * (by && by.kind === 'player' ? 1 : 0.5)); s.score += sc;
   if (e.def.drop && s.rng() < 0.75) s.pickups.push({ id: NEXT_ID++, kind: e.def.drop, x: e.x + dir * 0.6, z: e.z, uses: WEAPONS[e.def.drop].uses });
   s.events.push({ t: s.t, ev: 'kill', type: e.kind, by: by ? by.kind : 'hazard' });
   if (e.isBoss) { s.boss = null; }
@@ -401,7 +401,7 @@ function resolveActive(s, e) {
   if (m.spray) { e.sprayT = 0; return; }
   // melee: everyone in front within range and |dz| tolerance (thrown heavy hits several; melee hits the nearest, bat/pound hit all)
   const targets = e.kind === 'player' ? alive(s) : [s.player];
-  const cands = targets.filter((o) => o !== e && o.alive && Math.abs(o.z - e.z) <= CONFIG.hitZ && ((m.back ? !inFront(e, o) : inFront(e, o)) || Math.abs(o.x - e.x) < 0.35) && Math.abs(o.x - e.x) <= m.range + (o.kind === 'brute' ? 0.2 : 0) && (o.y || 0) < 0.9 && !(o.state === 'down' || o.state === 'getup' || o.state === 'fall' || o.state === 'dead' || o.state === 'thrown'));
+  const cands = targets.filter((o) => o !== e && o.alive && Math.abs(o.z - e.z) <= CONFIG.hitZ && ((m.back ? !inFront(e, o) : inFront(e, o)) || Math.abs(o.x - e.x) < 0.35) && Math.abs(o.x - e.x) <= m.range + (o.kind === 'brute' ? 0.2 : 0) && (o.y || 0) < 0.6 && !(o.state === 'down' || o.state === 'getup' || o.state === 'fall' || o.state === 'dead' || o.state === 'thrown'));
   cands.sort((a, bb) => Math.abs(a.x - e.x) - Math.abs(bb.x - e.x));
   const multi = m.name === 'Ground Pound' || m.weapon === 'bat' || m.weapon === 'whip' || m.name === 'Hook';
   let any = false;
@@ -453,7 +453,7 @@ function tickEntity(s, e, dt) {
     case 'reload': e.t -= dt; if (e.t <= 0) setState(e, 'idle'); break;
     case 'grab': if (e.kind !== 'player') { e.t -= dt; if (e.t <= 0) release(e); } break;
     case 'dead': e.t -= dt; break;
-    case 'fall': e.t -= dt; if (e.t <= 0) { if (e.kind === 'player') { playerDown(s, e.facing); } else { e.alive = false; e.state = 'gone'; } } break;
+    case 'fall': e.t -= dt; if (e.t <= 0) { if (e.kind === 'player') { playerDown(s, e.facing); } else { e.state = 'gone'; } } break;
   }
   e.z = clamp(e.z, b[0], b[1]);
   if (e.kind !== 'player' && s.lock && e.entered) e.x = clamp(e.x, s.lock.min + 0.3, s.lock.max - 0.3);
@@ -467,7 +467,6 @@ function landThrow(s, e) {
   // splash on whoever it lands on
   const others = (th && th.kind === 'player') ? alive(s).filter((o) => o !== e) : [];
   for (const o of others) if (Math.abs(o.x - e.x) < 1.2 && Math.abs(o.z - e.z) <= CONFIG.hitZ) hit(s, th, o, { name: 'Throw Splash', dmg: e.splash || 12, kd: true, kb: 0.5 }, dir, { force: true });
-  e.vx = 0;
 }
 function sprayShot(s, e, m) {
   const P = s.player; s.effects.push({ kind: 'muzzle', x: e.x + e.facing * 0.7, z: e.z, y: 1.3, t: 0.08, dir: e.facing });
@@ -514,7 +513,8 @@ function tickHazards(s, dt) {
     if (h.kind === 'bridge') { for (const e of all) if (e.x > h.x0 && e.x < h.x1 && (e.z < h.band[0] - 0.05 || e.z > h.band[1] + 0.05) && e.state !== 'fall' && e.state !== 'dead') fall(s, e, h, h.x0 - 0.8); }
     if (h.kind === 'boulder') {
       const period = h.period; const ph = s.hazardT[key] % period;
-      if (ph < dt && s.lock && s.lock.min < h.x1 && s.lock.max > h.x0 || (ph < dt && !s.lock && P.x > h.x0 - 8 && P.x < h.x1)) s.boulders.push({ x: h.x1 + 1, z: h.z, vx: -h.speed, r: 0.55, dmg: h.dmg, zTol: h.zTol, hitIds: [], id: NEXT_ID++ });
+      const room = P.x < h.x1 - 5 && P.x > h.x0 - 8;
+      if (ph < dt && room && (s.lock ? (s.lock.min < h.x1 && s.lock.max > h.x0) : true)) { s.boulders.push({ x: h.x1 + 1, z: h.z, vx: -h.speed, r: 0.55, dmg: h.dmg, zTol: h.zTol, hitIds: [], id: NEXT_ID++ }); s.effects.push({ kind: 'rumble', x: h.x1 + 1, z: h.z, y: 0.6, t: 0.7 }); }
       for (const bo of s.boulders) {
         bo.x += bo.vx * dt; bo.rot = (bo.rot || 0) + bo.vx * dt / 0.5;
         for (const e of all) if (!bo.hitIds.includes(e.id) && Math.abs(e.x - bo.x) < 0.7 && Math.abs(e.z - bo.z) <= bo.zTol && e.y < 0.75 && e.state !== 'dead') { bo.hitIds.push(e.id); hit(s, { kind: 'hazard', x: bo.x, z: bo.z, hitstop: 0 }, e, { name: 'Boulder', dmg: bo.dmg, kd: true, kb: 1.1 }, Math.sign(bo.vx), { force: true }); }
@@ -545,7 +545,7 @@ function fall(s, e, h, backX, backZ) {
     e.fallBack = { x: backX, z: backZ ?? clamp(e.z, bandAt(s, backX)[0], bandAt(s, backX)[1]) }; setState(e, 'fall', 0.9); e.y = 0; e.vy = 0; e.vx = 0; if (e.held) release(e); if (e.holder) release(e.holder);
     s.events.push({ t: s.t, ev: 'fall', hazard: h.kind });
     if (e.hp <= 0) { e.t = 0.01; }
-  } else { setState(e, 'fall', 0.7); e.vx = 0; e.vy = 0; if (e.holder) release(e.holder); if (e.held) release(e); s.kills++; s.score += Math.round(e.def.score * 0.5); s.events.push({ t: s.t, ev: 'kill', type: e.kind, by: 'hazard' }); if (e.isBoss) s.boss = null; }
+  } else { setState(e, 'fall', 0.7); e.alive = false; e.vx = 0; e.vy = 0; if (e.holder) release(e.holder); if (e.held) release(e); s.kills++; s.score += Math.round(e.def.score * 0.5); s.events.push({ t: s.t, ev: 'kill', type: e.kind, by: 'hazard' }); if (e.isBoss) s.boss = null; }
 }
 
 // ------------------------------------------------------------------ step
@@ -562,9 +562,9 @@ export function step(s, inp = {}, dt = DT) {
   for (const f of s.foes) if (f.alive) foeAI(s, f, dt);
   // entity ticks
   tickEntity(s, P, dt);
-  for (const f of s.foes) if (f.alive || f.state === 'dead') tickEntity(s, f, dt);
+  for (const f of s.foes) if (f.alive || f.state === 'dead' || f.state === 'fall') tickEntity(s, f, dt);
   if (P.state === 'fall' && P.t <= 0) { if (P.hp > 0) { P.x = P.fallBack.x; P.z = P.fallBack.z; setState(P, 'idle'); P.invuln = 1.0; } }
-  s.foes = s.foes.filter((f) => f.alive || (f.state === 'dead' && f.t > 0));
+  s.foes = s.foes.filter((f) => f.alive || ((f.state === 'dead' || f.state === 'fall') && f.t > 0));
   for (const pk of s.pickups) if (pk.food && Math.abs(pk.x - P.x) < 0.55 && Math.abs(pk.z - P.z) < 0.55 && P.state !== 'dead') { pk.eaten = true; const before = P.hp; P.hp = Math.min(P.maxHp, P.hp + FOOD[pk.kind].heal); s.score += 200; s.events.push({ t: s.t, ev: 'eat', heal: P.hp - before }); s.effects.push({ kind: 'heal', x: P.x, z: P.z, y: 1.6, t: 0.6 }); }
   s.pickups = s.pickups.filter((pk) => !pk.eaten);
   tickProjectiles(s, dt); tickHazards(s, dt);

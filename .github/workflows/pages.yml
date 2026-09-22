@@ -20,6 +20,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Mechanics checks
         run: node verify.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Browser playtest (desktop + phone)
+        run: |
+          npm ci
+          python3 -m http.server 8124 --directory dist --bind 127.0.0.1 &
+          sleep 1
+          node playtest.mjs http://127.0.0.1:8124
+          node playtest.mjs http://127.0.0.1:8124 --mobile
       - name: Disable Jekyll processing
         run: touch dist/.nojekyll
       - uses: actions/configure-pages@v5
