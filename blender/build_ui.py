@@ -55,8 +55,8 @@ def build_elements():
     def add(key, objs, w, h, ppm=UPM, outline=True, cam='flat', center=(0, 0)):
         E[key] = {'objs': objs, 'w': w, 'h': h, 'ppm': ppm, 'outline': outline, 'cam': cam, 'center': center}
     # title logo
-    add('logo', [text('雙截龍', 1.7, GOLD, 0.12, 0.025, loc=(0, 0, 1.75)), text('TWIN', 1.85, PINK, 0.16, 0.025, loc=(-2.55, 0, 0.0)), text('DRAGON', 1.85, CYAN, 0.16, 0.025, loc=(1.75, 0, 0.0)),
-                  K.cube('rule', (0, 0.1, -1.05), (8.6, 0.06, 0.06), RIM)], 10.4, 4.6)
+    add('logo', [text('雙截龍', 1.6, GOLD, 0.12, 0.025, loc=(0, 0, 1.45)), text('TWIN', 1.85, PINK, 0.16, 0.025, loc=(-2.15, 0, 0.0)), text('DRAGON', 1.85, CYAN, 0.16, 0.025, loc=(1.65, 0, 0.0)),
+                  K.cube('rule', (0, 0.1, -0.95), (8.4, 0.06, 0.06), RIM)], 10.0, 4.0)
     # menu cards (normal / cleared / locked) with the number badge disc on the left
     for key, badge, rim in (('card', PINK, None), ('card_done', GOLD, GOLD), ('card_lock', RIM, None)):
         add(key, plate(7.2, 1.3, PLATE, 0.16, 0.08, rim=rim) + [disc(0.42, badge, 0.1, (-3.1, -0.05, 0))], 7.6, 1.6)

@@ -1,7 +1,7 @@
 {
  "generated": "2026-09-22",
  "budget": 8388608,
- "total": 1469184,
+ "total": 1467644,
  "files": {
   "figures.json": {
    "bytes": 57721,
@@ -52,12 +52,12 @@
    "sha256": "98c727df2ef556ee"
   },
   "ui.json": {
-   "bytes": 2570,
-   "sha256": "1a3e35aa1df994d1"
+   "bytes": 2571,
+   "sha256": "6578c2eb9c0f6c6a"
   },
   "ui.png": {
-   "bytes": 205108,
-   "sha256": "6df23dd2ccd07766"
+   "bytes": 203567,
+   "sha256": "1f606e7aa24febc8"
   }
  }
 }
