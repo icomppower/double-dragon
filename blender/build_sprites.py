@@ -81,14 +81,15 @@ def toonify_all():
             mul.inputs[1].default_value = (base[0], base[1], base[2])
             nt.links.new(ramp.outputs[0], mul.inputs[0])
             nt.links.new(mul.outputs[0], em.inputs['Color'])
+        # always through a transparent mix so the stage builder can blank a material (fac 0) for overlay passes
+        mix = nt.nodes.new('ShaderNodeMixShader'); mix.name = 'ToonMix'; tr = nt.nodes.new('ShaderNodeBsdfTransparent')
+        mix.inputs[0].default_value = alpha; nt.links.new(tr.outputs[0], mix.inputs[1]); nt.links.new(em.outputs[0], mix.inputs[2]); nt.links.new(mix.outputs[0], out.inputs[0])
+        em.name = 'ToonEmit'
         if alpha < 1:
-            mix = nt.nodes.new('ShaderNodeMixShader'); tr = nt.nodes.new('ShaderNodeBsdfTransparent')
-            mix.inputs[0].default_value = alpha; nt.links.new(tr.outputs[0], mix.inputs[1]); nt.links.new(em.outputs[0], mix.inputs[2]); nt.links.new(mix.outputs[0], out.inputs[0])
             try: m.surface_render_method = 'BLENDED'
             except Exception: pass
-        else:
-            nt.links.new(em.outputs[0], out.inputs[0])
-        m['toon'] = True
+        m['toon'] = True; m['alpha'] = alpha; m['emissive'] = 1 if emit > 0 else 0
+        if emit > 0: m['emit_color'] = list(em.inputs['Color'].default_value)[:3]
 
 # ------------------------------------------------------------------ poses (three.js rotations, [x, y, z]) ported from game.js
 IDLE = {'ArmL': [0.55, 0, 0], 'ArmR': [0.75, 0, 0], 'LegL': [0, 0, 0], 'LegR': [0, 0, 0], 'Torso': [0.05, 0, 0], 'Head': [0, 0, 0]}

@@ -322,8 +322,9 @@ def build_forest():
     k.append(piece('Bush', [sphere('b1', (0, 0, 0.5), 0.55, LEAF2, None, 8, 6, (1, 0.9, 0.8)), sphere('b2', (0.45, 0.1, 0.4), 0.4, LEAF, None, 8, 6), sphere('b3', (-0.4, -0.1, 0.42), 0.38, LEAF, None, 8, 6)]))
     k.append(piece('Rock', [sphere('r1', (0, 0, 0.5), 0.7, ROCK, None, 8, 6, (1, 0.8, 0.7)), sphere('r2', (0.5, 0.2, 0.35), 0.45, ROCK2, None, 7, 5)]))
     # cliff wall segment 8 m (backdrop)
-    parts = [cube('cliff', (0, 2.5, 4.0), (8, 5, 8), CLIFF), cube('strata', (0, -0.05, 2.0), (8, 0.1, 0.4), ROCK2), cube('strata2', (0, -0.05, 5.5), (8, 0.1, 0.5), ROCK2), cube('moss', (-2, -0.06, 0.6), (3, 0.05, 1.0), MOSS), cube('top', (0, 2.5, 8.1), (8.2, 5.2, 0.3), MOSS)]
-    for i in range(5): parts.append(sphere('bump', (-3.2 + i * 1.6, -0.1, random.uniform(1, 7)), random.uniform(0.4, 0.8), ROCK, None, 7, 5))
+    CLIFF2 = mat('Cliff shade', '76684f', 0.95)
+    parts = [cube('cliff', (0, 1.25, 3.1), (8, 2.5, 6.2), CLIFF), cube('strata', (0, -0.05, 1.6), (8, 0.1, 0.35), ROCK2), cube('strata2', (0, -0.05, 4.3), (8, 0.1, 0.4), ROCK2), cube('moss', (-2, -0.06, 0.5), (3, 0.05, 0.8), MOSS), cube('top', (0, 1.25, 6.3), (8.2, 2.7, 0.3), MOSS)]
+    for i in range(4): parts.append(sphere('bump', (-3.0 + i * 2.0, -0.08, random.uniform(0.8, 5.4)), random.uniform(0.35, 0.6), CLIFF2, None, 7, 5))
     k.append(piece('Cliff', parts))
     # rope bridge segment 4 m (walkable floor piece over the gorge)
     parts = [cube('plank%d' % i, (-1.8 + i * 0.4, 0, 0.05), (0.32, 2.0, 0.08), PLANK) for i in range(10)]
@@ -337,7 +338,7 @@ def build_forest():
     k.append(piece('Gorge', [cube('water', (0, 0, -3.0), (8, 6, 0.1), WATER), cube('bankL', (-4.2, 0, -1.6), (0.6, 6, 3.2), ROCK2), cube('bankR', (4.2, 0, -1.6), (0.6, 6, 3.2), ROCK2)], {'w': 8, 'h': 0.1, 'd': 6}))
     # hut (backdrop)
     k.append(piece('Hut', [cube('wall', (0, 1.5, 1.4), (4, 3, 2.8), PLANK), cyl('roof', (0, 1.5, 3.4), 2.9, 1.4, THATCH, None, 4, (0, 0, math.radians(45)), 0.05), cube('door', (0, -0.05, 1.0), (0.9, 0.1, 2.0), STONE2)]))
-    k.append(piece('Waterfall', [cube('rock', (0, 2.0, 4.0), (5, 4, 8), CLIFF), cube('fall', (0, -0.15, 4.0), (1.6, 0.2, 8), mat('Falls', 'cfe8f2', 0.2, 0, 0.3, 0.75)), cube('pool', (0, -0.6, 0.05), (4, 1.2, 0.1), WATER)]))
+    k.append(piece('Waterfall', [cube('rock', (0, 2.0, 3.1), (5, 4, 6.2), CLIFF), cube('fall', (0, -0.15, 3.1), (1.6, 0.2, 6.2), mat('Falls', 'cfe8f2', 0.2, 0, 0.3, 0.75)), cube('pool', (0, -0.6, 0.05), (4, 1.2, 0.1), WATER)]))
     return k
 
 def build_hideout():
