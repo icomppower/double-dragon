@@ -1,7 +1,8 @@
 """雙截龍 · TWIN DRAGON — asset kit built with Blender's bpy API (Blender 5.2 LTS).
 Run:  blender --background --python blender/build_assets.py
-Writes dist/assets/{figures,weapons,kit}.glb, dist/assets/kit.json (footprints for the sim + fallbacks),
-blender/TwinDragon_Kit.blend and blender/kit-preview.png.
+As a script it writes blender/glb/{figures,weapons,kit}.glb + kit.json, blender/TwinDragon_Kit.blend and blender/kit-preview.png.
+As a module (build_sprites.py, build_stages.py, build_ui.py import it) it only provides the palette, primitives, build_figure, FIGURES,
+build_weapons and the four stage-kit builders; the sprite pipeline renders those objects instead of exporting them.
 
 Conventions: metres, Blender Z up, figures face +Y (glTF export flips to -Z, three.js "forward").
 Backdrop pieces put their visible front at y = 0 and extend into +Y (behind, -Z in three), so the
@@ -14,7 +15,6 @@ import bpy, math, random, os, json
 from mathutils import Vector
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, 'dist', 'assets'); os.makedirs(OUT, exist_ok=True)
 bpy.ops.wm.read_factory_settings(use_empty=True)
 random.seed(1987)
 MATS = {}
@@ -135,10 +135,10 @@ def select_tree(o):
     o.select_set(True)
     for c in o.children: select_tree(c)
 
-def export(roots, filename):
+def export(roots, filename, outdir):
     bpy.ops.object.select_all(action='DESELECT')
     for r in roots: select_tree(r)
-    bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, filename), export_format='GLB', use_selection=True,
+    bpy.ops.export_scene.gltf(filepath=os.path.join(outdir, filename), export_format='GLB', use_selection=True,
                               export_yup=True, export_apply=True)
     print('EXPORTED', filename)
 
@@ -210,8 +210,6 @@ FIGURES = {
     'Boss': dict(top=COAT, bottom=BOSSPANTS, role='boss', hair=HAIRBROWN, hairstyle='short', bulk=1.1, scale=1.08),
     'Captive': dict(top=DRESS, bottom=DRESS, role='captive', hair=HAIRBROWN, hairstyle='long', skin=SKIN3),
 }
-figures = [build_figure(n, s) for n, s in FIGURES.items()]
-export(figures, 'figures.glb')
 
 # weapons (origin = grip point, blade/handle along +Z so the runtime can orient them) ------------
 def build_weapons():
@@ -226,7 +224,6 @@ def build_weapons():
     ws.append(piece('W_Crate', [cube('box', (0, 0, 0.3), (0.6, 0.6, 0.6), CRATE), cube('slatA', (0, -0.31, 0.3), (0.62, 0.02, 0.08), WOOD), cube('slatB', (0, -0.31, 0.3), (0.08, 0.02, 0.62), WOOD), cube('slatC', (-0.31, 0, 0.3), (0.02, 0.62, 0.08), WOOD)]))
     ws.append(piece('W_Boulder', [sphere('rock', (0, 0, 0.45), 0.45, ROCK, None, 10, 7, (1, 0.95, 0.9)), sphere('rock2', (0.15, 0.1, 0.5), 0.3, ROCK2, None, 8, 6)]))
     return ws
-export(build_weapons(), 'weapons.glb')
 
 # stage kits ----------------------------------------------------------------------------------
 def windows(parts, x0, x1, z0, z1, cols, rows, lit=0.35, depth=0.02, w=0.7, h=0.9, ma_dark=WINDOW, ma_lit=WINLIT):
@@ -368,38 +365,46 @@ def build_hideout():
     k.append(piece('TrapFloor', [cube('slab', (0, 0, -0.02), (2.0, 2.2, 0.06), STONE2), cube('crack', (0, 0, 0.005), (1.9, 0.06, 0.02), RUBBER)], {'w': 2, 'h': 0.05, 'd': 2.2}))
     return k
 
-kit = build_slum() + build_industrial() + build_forest() + build_hideout()
-BUN = mat('Bun', 'f3e3c8', 0.7); BUNPINK = mat('Bun pink', 'e0607a', 0.6); PLATE = mat('Plate', 'f4f4f0', 0.4)
-kit.append(piece('Bun', [cyl('plate', (0, 0, 0.015), 0.28, 0.03, PLATE, None, 16), sphere('bun', (0, 0, 0.17), 0.17, BUN, None, 12, 8, (1, 1, 0.85)), sphere('dot', (0, 0, 0.3), 0.05, BUNPINK, None, 8, 6, (1, 1, 0.5))]))
-kit.append(piece('Marker', [cyl('ring', (0, 0, 0.02), 0.9, 0.04, HAZARD, None, 24, None, None)], {'w': 1.8, 'h': 0.05, 'd': 1.8}))
-export(kit, 'kit.glb')
-with open(os.path.join(OUT, 'kit.json'), 'w') as f:
-    json.dump({'figures': list(FIGURES.keys()), 'pieces': FOOT, 'blender': bpy.app.version_string}, f, indent=1, sort_keys=True)
-print('KIT.JSON', len(FOOT), 'pieces')
+def main():
+    OUT = os.path.join(ROOT, 'blender', 'glb'); os.makedirs(OUT, exist_ok=True)
+    figures = [build_figure(n, sp) for n, sp in FIGURES.items()]
+    export(figures, 'figures.glb', OUT)
+    export(build_weapons(), 'weapons.glb', OUT)
+    kit = build_slum() + build_industrial() + build_forest() + build_hideout()
+    BUN = mat('Bun', 'f3e3c8', 0.7); BUNPINK = mat('Bun pink', 'e0607a', 0.6); PLATE = mat('Plate', 'f4f4f0', 0.4)
+    kit.append(piece('Bun', [cyl('plate', (0, 0, 0.015), 0.28, 0.03, PLATE, None, 16), sphere('bun', (0, 0, 0.17), 0.17, BUN, None, 12, 8, (1, 1, 0.85)), sphere('dot', (0, 0, 0.3), 0.05, BUNPINK, None, 8, 6, (1, 1, 0.5))]))
+    kit.append(piece('Marker', [cyl('ring', (0, 0, 0.02), 0.9, 0.04, HAZARD, None, 24, None, None)], {'w': 1.8, 'h': 0.05, 'd': 1.8}))
+    export(kit, 'kit.glb', OUT)
+    with open(os.path.join(OUT, 'kit.json'), 'w') as f:
+        json.dump({'figures': list(FIGURES.keys()), 'pieces': FOOT, 'blender': bpy.app.version_string}, f, indent=1, sort_keys=True)
+    print('KIT.JSON', len(FOOT), 'pieces')
 
-# preview render + .blend --------------------------------------------------------------------------
-def preview():
-    roots = figures + kit
-    x = 0.0
-    for r in roots:
-        r.location.x = x; x += max(FOOT.get(r.name, {'w': 1})['w'], 1.2) + 1.0
-    sc = bpy.context.scene
-    bpy.ops.object.camera_add(location=(x / 2, -70, 26), rotation=(math.radians(68), 0, 0)); cam = bpy.context.object
-    cam.data.type = 'ORTHO'; cam.data.ortho_scale = x + 6; sc.camera = cam
-    bpy.ops.object.light_add(type='SUN', location=(0, -20, 40)); sun = bpy.context.object; sun.rotation_euler = (math.radians(45), math.radians(15), math.radians(25)); sun.data.energy = 3.5
+    # preview render + .blend --------------------------------------------------------------------------
+    def preview():
+        roots = figures + kit
+        x = 0.0
+        for r in roots:
+            r.location.x = x; x += max(FOOT.get(r.name, {'w': 1})['w'], 1.2) + 1.0
+        sc = bpy.context.scene
+        bpy.ops.object.camera_add(location=(x / 2, -70, 26), rotation=(math.radians(68), 0, 0)); cam = bpy.context.object
+        cam.data.type = 'ORTHO'; cam.data.ortho_scale = x + 6; sc.camera = cam
+        bpy.ops.object.light_add(type='SUN', location=(0, -20, 40)); sun = bpy.context.object; sun.rotation_euler = (math.radians(45), math.radians(15), math.radians(25)); sun.data.energy = 3.5
+        try:
+            sc.render.engine = 'BLENDER_EEVEE_NEXT'
+        except Exception:
+            sc.render.engine = 'BLENDER_EEVEE'
+        sc.render.resolution_x = 3000; sc.render.resolution_y = 500; sc.render.resolution_percentage = 100
+        sc.render.filepath = os.path.join(ROOT, 'blender', 'kit-preview.png'); sc.render.image_settings.file_format = 'PNG'
+        w = bpy.data.worlds.new('W'); w.use_nodes = True; sc.world = w
+        bg = w.node_tree.nodes.get('Background'); bg.inputs[0].default_value = (0.06, 0.07, 0.1, 1); bg.inputs[1].default_value = 1.0
+        bpy.ops.render.render(write_still=True)
+        print('PREVIEW written')
     try:
-        sc.render.engine = 'BLENDER_EEVEE_NEXT'
-    except Exception:
-        sc.render.engine = 'BLENDER_EEVEE'
-    sc.render.resolution_x = 3000; sc.render.resolution_y = 500; sc.render.resolution_percentage = 100
-    sc.render.filepath = os.path.join(ROOT, 'blender', 'kit-preview.png'); sc.render.image_settings.file_format = 'PNG'
-    w = bpy.data.worlds.new('W'); w.use_nodes = True; sc.world = w
-    bg = w.node_tree.nodes.get('Background'); bg.inputs[0].default_value = (0.06, 0.07, 0.1, 1); bg.inputs[1].default_value = 1.0
-    bpy.ops.render.render(write_still=True)
-    print('PREVIEW written')
-try:
-    preview()
-except Exception as e:
-    print('preview skipped:', e)
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, 'blender', 'TwinDragon_Kit.blend'))
-print('DONE')
+        preview()
+    except Exception as e:
+        print('preview skipped:', e)
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, 'blender', 'TwinDragon_Kit.blend'))
+    print('DONE')
+
+if __name__ == '__main__':
+    main()
