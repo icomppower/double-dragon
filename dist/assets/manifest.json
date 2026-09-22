@@ -1,0 +1,63 @@
+{
+ "generated": "2026-09-22",
+ "budget": 8388608,
+ "total": 1469184,
+ "files": {
+  "figures.json": {
+   "bytes": 57721,
+   "sha256": "78182a9868496c15"
+  },
+  "figures.png": {
+   "bytes": 448688,
+   "sha256": "3c9e161045f827ab"
+  },
+  "fx.json": {
+   "bytes": 2519,
+   "sha256": "384828f1e5a5d400"
+  },
+  "fx.png": {
+   "bytes": 26095,
+   "sha256": "3940ebded3e7ebdc"
+  },
+  "stage_hideout.json": {
+   "bytes": 3690,
+   "sha256": "6b60bcc5d5330768"
+  },
+  "stage_hideout.png": {
+   "bytes": 141856,
+   "sha256": "2fdfef57b7153cf5"
+  },
+  "stage_ridge.json": {
+   "bytes": 3273,
+   "sha256": "96dab93dc01a47bf"
+  },
+  "stage_ridge.png": {
+   "bytes": 273077,
+   "sha256": "38e2b1358325ec6a"
+  },
+  "stage_street.json": {
+   "bytes": 2907,
+   "sha256": "8becebeec61e273c"
+  },
+  "stage_street.png": {
+   "bytes": 145272,
+   "sha256": "5da5fa33522a23b3"
+  },
+  "stage_yard.json": {
+   "bytes": 3368,
+   "sha256": "735fae9021d537b9"
+  },
+  "stage_yard.png": {
+   "bytes": 153040,
+   "sha256": "98c727df2ef556ee"
+  },
+  "ui.json": {
+   "bytes": 2570,
+   "sha256": "1a3e35aa1df994d1"
+  },
+  "ui.png": {
+   "bytes": 205108,
+   "sha256": "6df23dd2ccd07766"
+  }
+ }
+}
