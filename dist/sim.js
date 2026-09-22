@@ -261,15 +261,16 @@ export function useContinue(s) {
 }
 
 // ------------------------------------------------------------------ player control
+function pstart(s, P, m) { s.attacks = (s.attacks || 0) + 1; startMove(P, m); }
 function playerControl(s, inp, dt) {
   const P = s.player; const b = band(s);
   const press = { punch: inp.punch && !s.prev.punch, kick: inp.kick && !s.prev.kick, jump: inp.jump && !s.prev.jump };
   if (P.state === 'grab') {
     const h = P.held; if (!h || !h.alive) { release(P); return; }
     P.t -= dt; if (P.t <= 0 || P.grabHits >= 3) { release(P); setState(h, 'hit', 0.3); h.vx = P.facing * 1.5; return; }
-    if (press.punch) { startMove(P, MOVES.headbutt); }
-    else if (press.kick) { startMove(P, MOVES.knee); }
-    else if (press.jump) { startMove(P, MOVES.throw); }
+    if (press.punch) { pstart(s, P, MOVES.headbutt); }
+    else if (press.kick) { pstart(s, P, MOVES.knee); }
+    else if (press.jump) { pstart(s, P, MOVES.throw); }
     return;
   }
   // input buffer: a punch/kick/jump pressed during recovery or hitstun fires as soon as you are free (0.2 s window)
@@ -288,22 +289,22 @@ function playerControl(s, inp, dt) {
     }
   }
   if (P.y > 0 || P.state === 'jump') {
-    if (press.punch || press.kick) { startMove(P, MOVES.jumpkick); P.state = 'attack'; P.air = true; }
+    if (press.punch || press.kick) { pstart(s, P, MOVES.jumpkick); P.state = 'attack'; P.air = true; }
     return;
   }
   if (press.jump) { setState(P, 'jump'); P.vy = JUMP_V; P.y = 0.001; P.jumpDir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0); if (P.jumpDir) P.facing = P.jumpDir; return; }
   if (press.punch || press.kick) {
     // elbow: a foe right behind you
     const behind = alive(s).find((f) => !inFront(P, f) && Math.abs(f.x - P.x) <= 0.8 && Math.abs(f.z - P.z) <= CONFIG.hitZ && !busy(f));
-    if (behind && press.punch) { startMove(P, MOVES.elbow); return; }
+    if (behind && press.punch) { pstart(s, P, MOVES.elbow); return; }
     if (P.weapon) {
       const w = WEAPONS[P.weapon];
-      startMove(P, { ...MOVES.jab, name: w.name, dmg: w.dmg, range: w.range, windup: w.windup, active: w.active, recovery: w.recovery, kd: w.kd, stagger: w.stagger || 0, kb: w.kb || 0.8, anim: w.heavy ? 'heave' : w.thrown ? 'throwarm' : 'weapon', weapon: P.weapon, thrown: !!w.thrown });
+      pstart(s, P, { ...MOVES.jab, name: w.name, dmg: w.dmg, range: w.range, windup: w.windup, active: w.active, recovery: w.recovery, kd: w.kd, stagger: w.stagger || 0, kb: w.kb || 0.8, anim: w.heavy ? 'heave' : w.thrown ? 'throwarm' : 'weapon', weapon: P.weapon, thrown: !!w.thrown });
       return;
     }
-    if (press.kick) { startMove(P, MOVES.kick); return; }
+    if (press.kick) { pstart(s, P, MOVES.kick); return; }
     const m = P.combo === 0 ? MOVES.jab : P.combo === 1 ? MOVES.cross : MOVES.hook;
-    startMove(P, m); return;
+    pstart(s, P, m); return;
   }
   // walking
   let dx = (inp.right ? 1 : 0) - (inp.left ? 1 : 0), dz = (inp.down ? 1 : 0) - (inp.up ? 1 : 0);
@@ -612,7 +613,7 @@ export function snap(s) {
     player: { x: +P.x.toFixed(2), z: +P.z.toFixed(2), y: +P.y.toFixed(2), hp: P.hp, state: P.state, phase: P.phase, move: P.move ? P.move.name : null, facing: P.facing, weapon: P.weapon, uses: P.uses, combo: P.combo, invuln: +P.invuln.toFixed(2) },
     foes: s.foes.filter((f) => f.alive).map((f) => ({ type: f.kind, x: +f.x.toFixed(2), z: +f.z.toFixed(2), hp: f.hp, state: f.state, move: f.move ? f.move.name : null, elite: f.elite })),
     boss: s.boss && s.boss.alive ? { name: s.boss.name, hp: s.boss.hp, max: s.boss.maxHp } : null,
-    pickups: s.pickups.map((p) => p.kind), projectiles: s.projectiles.length, boulders: s.boulders.length, kills: s.kills, hitsDealt: s.hitsDealt, hitsTaken: s.hitsTaken, deaths: s.deaths, log: s.log.length };
+    pickups: s.pickups.map((p) => p.kind), projectiles: s.projectiles.length, boulders: s.boulders.length, kills: s.kills, attacks: s.attacks || 0, hitsDealt: s.hitsDealt, hitsTaken: s.hitsTaken, deaths: s.deaths, log: s.log.length };
 }
 
 // ------------------------------------------------------------------ bots
